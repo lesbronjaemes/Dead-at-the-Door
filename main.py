@@ -8,12 +8,17 @@ class room:
         self.changeRoom = name
         self.title = title
         self.subtitle = subtitle
-        self.firstTime = [True, firstTimeText]
         self.roomText = roomText
         self.interactions = interactions
         self.movement = movement
         self.startScreen = True
         self.state = 0
+        self.inventory = []
+
+        if firstTimeText != None:
+            self.firstTime = [True, firstTimeText]
+        else:
+            self.firstTime = [False]
 
     def calculateTime(self):
         hours = str(time // 60)
@@ -112,6 +117,70 @@ class room:
         except:
             print("Error, Try Again!")
             return " "
+    
+    def getCommand(self, string, command):
+        if string == command[:len(string)]:
+            return True
+        else:
+            return False
+    
+    def getStringInList(self, string, list):
+        for i in list:
+            if i == string:
+                return True
+        
+        return False
+
+    def errorMessage():
+        print("Error, Try Again!")
+
+    def interact(self, argument):
+        if argument == "/":
+            print("List of possible interactions:")
+
+            for i in self.interactions:
+                print(i.title())
+        elif self.getCommand(argument, "door") and self.changeRoom == "abandonedBuildingEntrance":
+            if self.state == 0:
+                print("You grip the door handle tightly, thrusting it closed with a forceful slam.")
+
+                self.state = 1
+                self.interactions.append("door (closed)")
+                self.interactions.remove("door (open)")
+            elif self.state == 1:
+                print("You grab the door handle and pull it open.")
+
+                self.state = 0
+                self.interactions.append("door (open)")
+                self.interactions.remove("door (closed)")
+            elif self.state == 2:
+                print("You attempt to turn the doorknob, but it refuses to budge, signaling that the door is securely locked and inaccessible.")
+        elif self.getCommand(argument, "shovel") and self.changeRoom == "abandonedBuildingHatch" and self.getStringInList("shovel", self.interactions):
+            print("You pick up the weathered shovel.")
+
+            self.state = 1
+            self.inventory.append("shovel")
+            self.interactions.remove("shovel")
+        else:
+            self.errorMessage()
+
+    def use(self, argument):
+        if argument == "/":
+            print("Inventory:")
+
+            if len(self.inventory) == 0:
+                print("Nothing")
+            else:
+                for i in self.inventory:
+                    print(i.title())
+
+    def help(self):
+        print("[" + self.colourText("yellow", "North, East, South, West") + "] Movement Commands")
+        print("[" + self.colourText("yellow", "Map") + "] Displays the Map")
+        print("[" + self.colourText("yellow", "Use") + "] Item Usage (Type / For a List of Items)")
+        print("[" + self.colourText("yellow", "Interact") + "] Room Interaction (Type / For a List of Interactions)")
+        print("[" + self.colourText("yellow", "Clear") + "] Clears the Console")
+        print("[" + self.colourText("yellow", "Help") + "] Get the Command List\n")
 
     def run(self):
         if self.startScreen:
@@ -127,58 +196,35 @@ class room:
                 self.printASCII(self.title)
             
             print(self.colourText("red", self.subtitle + " | " + self.calculateTime()) + "\n")
-            print(self.roomText + "\n")
-            print("[" + self.colourText("yellow", "North, East, South, West") + "] Movement Commands")
-            print("[" + self.colourText("yellow", "Use") + "] Item Usage (Type / For a List of Items)")
-            print("[" + self.colourText("yellow", "Interact") + "] Room Interaction (Type / For a List of Interactions)")
-            print("[" + self.colourText("yellow", "Clear") + "] Clears the Console")
-            print("[" + self.colourText("yellow", "Help") + "] Get the Command List\n")
+            self.help()
+            
+            if self.changeRoom == "abandonedBuildingEntrance":
+                print(self.roomText[0] + "\n")
+            else:
+                print(self.roomText[self.state] + "\n")
 
             self.startScreen = False
 
         action = self.inputManager()
         
-        if action[0] == "interact"[:len(action[0])]:
-            if action[1] == "/":
-                print("List of possible interactions:")
-
-                for i in self.interactions:
-                    print(i.title())
-            elif action[1] == "door"[:len(action[1])] and ("door (open)" in self.interactions or "door (closed)" in self.interactions or "door (locked)" in self.interactions):
-                if self.state == 0:
-                    print("You grip the door handle tightly, thrusting it closed with a forceful slam.")
-
-                    self.state = 1
-                    self.interactions.remove("door (open)")
-                    self.interactions.append("door (closed)")
-                elif self.state == 1:
-                    print("You grab the door handle and pull it open.")
-
-                    self.state = 0
-                    self.interactions.remove("door (closed)")
-                    self.interactions.append("door (open)")
-                elif self.state == 2:
-                    print("You attempt to turn the doorknob, but it refuses to budge, signaling that the door is securely locked and inaccessible.")
-            else:
-                print("Error, Try Again!")
-        elif action[0] == "clear"[:len(action[0])]:
+        if self.getCommand(action[0], "interact"):
+            self.interact(action[1])
+        elif self.getCommand(action[0], "clear"):
             self.startScreen = True
-        elif action[0] == "help"[:len(action[0])]:
-            print("[" + self.colourText("yellow", "North, East, South, West") + "] Movement Commands")
-            print("[" + self.colourText("yellow", "Use") + "] Item Usage (Type / For a List of Items)")
-            print("[" + self.colourText("yellow", "Interact") + "] Room Interaction (Type / For a List of Interactions)")
-            print("[" + self.colourText("yellow", "Clear") + "] Clears the Console")
-            print("[" + self.colourText("yellow", "Help") + "] Get the Command List")
+        elif self.getCommand(action[0], "help"):
+            self.help()
+        elif self.getCommand(action[0], "use"):
+            self.use(action[1])
         
         for i, v in self.movement.items():
-            if action[0] == i[:len(action[0])]:
+            if self.getCommand(action[0], i):
                 self.changeRoom = v
                 self.startScreen = True
 
         print("")
 
 currentRoom = "abandonedBuildingEntrance"
-time = 50
+time = 0
 rooms = {}
 
 for i, v in roomData.items():
